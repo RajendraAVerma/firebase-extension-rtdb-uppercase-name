@@ -1,25 +1,21 @@
-/*
- * This template contains a HTTP function that
- * responds with a greeting when called
- *
- * Reference PARAMETERS in your functions code with:
- * `process.env.<parameter-name>`
- * Learn more about building extensions in the docs:
- * https://firebase.google.com/docs/extensions/publishers
- */
+import { database, logger } from "firebase-functions/v1";
 
-const functions = require("firebase-functions");
+const app = initializeApp();
 
-exports.greetTheWorld = functions.https.onRequest((req, res) => {
-  // Here we reference a user-provided parameter
-  // (its value is provided by the user during installation)
-  const consumerProvidedGreeting = process.env.GREETING;
+// Listens for new messages added to /messages/{pushId}/original and creates an
+// uppercase version of the message to /messages/{pushId}/uppercase
+// for all databases in 'us-central1'
+export const makeuppercase = database
+  .ref("/messages/{pushId}/uppercase")
+  .onCreate(async (snapshot, context) => {
+    // Grab the current value of what was written to the Realtime Database.
+    const original = snapshot.val();
 
-  // And here we reference an auto-populated parameter
-  // (its value is provided by Firebase after installation)
-  const instanceId = process.env.EXT_INSTANCE_ID;
+    // Convert it to upper case.
+    logger.log("Uppercasing", context.params.pushId, original);
+    const uppercase = original.toUpperCase();
 
-  const greeting = `${consumerProvidedGreeting} everyone from ${instanceId}`;
-
-  res.send(greeting);
-});
+    // Setting an "uppercase" sibling in the Realtime Database.
+    const upperRef = snapshot.ref.parent.child("upper");
+    await upperRef.set(uppercase);
+  });
